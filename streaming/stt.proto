@@ -1,0 +1,90 @@
+syntax = "proto3";
+import "google/protobuf/empty.proto";
+package stt;
+
+// define StreamingOptions
+message StreamingOptions {
+  enum Encoding {
+    LINEAR16 = 0;             // Represents LINEAR16 encoding. s16le. 16-bit signed little-endian 16000 Hz.
+  }
+  enum Model {
+    RU_GENERAL = 0;            // Represents Russian general model.
+    UZ_GENERAL = 1;            // Represents Uzbek general model.
+    // RU_UZ_GENERAL = 2;         // Represents Russian-Uzbek general model. Not supported yet.
+  }
+  optional string session_id = 1;       // Session ID for the request. Can be used to reconnect to a session.
+  int32 sample_rate = 2;       // Sample rate of the audio.
+  Encoding encoding = 3;         // Encoding of the audio.
+  optional Model model = 4;            // Model to use for the transcription.
+  string auth_token = 5;       // Authorization token for the request.
+  optional string tag = 6;              // Tag to be show in billing.
+}
+
+message StreamingRequest {
+  enum Type {
+    STREAMING = 0;             // Represents a streaming request.
+    STOP = 1;                  // Represents a stop request.
+    AUTH = 2;                  // Represents an auth request.
+  }
+  Type type = 1;               // Type of the request.
+  oneof payload {
+    StreamingOptions options = 2; // Options for the request.
+    bytes chunk = 3;     // Audio chunk for the request.
+  }
+}
+
+message TranscriptionWords {
+  int32 start = 1;             // Start time of the word in milliseconds.
+  int32 end = 2;               // End time of the word in milliseconds.
+  string word = 3;             // The transcribed word.
+  optional string id = 4;               // The id of the word.
+}
+
+message Range {
+  int32 start = 1;             // Start time of the range in milliseconds.
+  int32 end = 2;               // End time of the range in milliseconds.
+}
+
+message StreamingResponse {
+  enum Status {
+    OK = 0;                   // Represents a successful response. Result will be present.
+    ERROR = 1;                // Represents an error. Result may be present.
+    END_OF_SESSION = 2;       // Represents the end of the session. Result will be present.
+  }
+  Status status = 1;           // Status of the response.
+  string session_id = 2;       // Session ID of the response.
+  oneof response {
+    Result result = 3;         // Result of transcription.
+    Error error = 4;           // Error of the response.
+  }
+}
+
+message Result {
+  repeated TranscriptionWords offsets = 1; // List of transcription words.
+  repeated TranscriptionWords temporary_offsets = 2; // List of temporary transcription words.
+  int32 total_audio_duration = 3; // Total audio duration that server has received.
+  optional Range cursors = 4; // List of cursors. This indicate what part of audio has been transcribed during Chunking asr. Will be null on final response.
+  int32 ending_silence_duration = 5; // Ending silence duration in milliseconds.
+}
+
+message Error {
+  enum ErrorCode {
+    UNKNOWN_ERROR = 0;  // Default value, represents unspecified error.
+    SERVICE_NOT_AVAILABLE = 1;  // Service is not available.
+    TOO_MANY_CHANNELS = 2;  // Too many active channels. Currently maximum active channels is 3 per user. Contact support for more channels.
+    AUTHENTICATION_FAILURE = 3;  // Authentication failure.
+    INVALID_ARGUMENT = 4;  // Invalid argument.
+    PAYMENT_REQUIRED = 5;  // Payment required.
+    TOO_LONG_SESSION = 6;  // Session is too long. Currently maximum session duration is 20 minutes.
+    AUDIO_SIZE_TOO_LARGE = 7;  // Audio is too big. Currently maximum audio size is 20 * 60 * 1000 * 16000 * 2 / 1000 / 1024 ~ 36MB.
+  }
+  ErrorCode code = 1;
+  string message = 2;
+  optional string details = 3;
+}
+
+
+service Recognizer {
+  // Bi-directional streaming RPC for recognizing streamed audio.
+  rpc RecognizeStreaming(stream StreamingRequest) returns (stream StreamingResponse);
+}
