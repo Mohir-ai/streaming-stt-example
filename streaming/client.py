@@ -86,43 +86,12 @@ def run():
 
             if response.status == stt_pb2.StreamingResponse.OK:
                 response = response.result
-                last_offset = response.offsets[-1] if response.offsets else None
-                word_offsets = {
-                    (offset["id"] if type(offset) == dict else offset.id): offset
-                    for offset in [
-                        *word_offsets.values(),
-                        # *(
-                        #     [
-                        #         stt_pb2.TranscriptionWords(
-                        #             start=last_offset.end,
-                        #             end=last_offset.end,
-                        #             word=" | ",
-                        #             id=uuid.uuid4().hex,
-                        #         )
-                        #     ]
-                        #     if last_offset
-                        #     else []
-                        # ),
-                        *response.offsets,
-                    ]
-                }
+
                 # clear console
                 print("\033[H\033[J", end="")
-                print(
-                    " ".join(
-                        [
-                            offset.word
-                            for offset in sorted(
-                                [
-                                    *word_offsets.values(),
-                                    *response.temporary_offsets,
-                                ],
-                                key=lambda x: x.start,
-                            )
-                        ]
-                    )
-                    + ("..." if response.ending_silence_duration > 600 else "")
-                )
+                print("Text: " + response.text)
+                print("Final: " + str(response.final))
+                print("Words: " + " ".join([offset.word for offset in response.words]))
 
 
 if __name__ == "__main__":

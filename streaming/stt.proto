@@ -37,7 +37,7 @@ message TranscriptionWords {
   int32 start = 1;             // Start time of the word in milliseconds.
   int32 end = 2;               // End time of the word in milliseconds.
   string word = 3;             // The transcribed word.
-  optional string id = 4;               // The id of the word.
+  optional string id = 4;      // The id of the word.
 }
 
 message Range {
@@ -64,7 +64,10 @@ message Result {
   repeated TranscriptionWords temporary_offsets = 2; // List of temporary transcription words.
   int32 total_audio_duration = 3; // Total audio duration that server has received.
   optional Range cursors = 4; // List of cursors. This indicate what part of audio has been transcribed during Chunking asr. Will be null on final response.
-  int32 ending_silence_duration = 5; // Ending silence duration in milliseconds.
+  int32 ending_silence_duration = 5;     // Ending silence duration in milliseconds.
+  string text = 6;                       // Transcribed text.
+  bool final = 7;                        // Is final result or not.
+  repeated TranscriptionWords words = 8; // List of transcription words.
 }
 
 message Error {
